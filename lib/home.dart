@@ -1,6 +1,5 @@
 import 'package:appwrite/appwrite.dart' as appwriteClient;
 import 'package:appwrite_test/constants/constants.dart';
-// import 'package:appwrite/models.dart';
 import 'package:dart_appwrite/dart_appwrite.dart' as appwriteServer;
 import 'package:appwrite_test/notes.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +17,11 @@ class _HomeState extends State<Home> {
   appwriteClient.Account account;
   _HomeState(this.account);
 
+  late appwriteServer.Account accountServer;
+  late appwriteServer.Databases databasesServer;
+  late appwriteServer.Users usersServer;
+  late appwriteServer.Client serverClient;
+
   User? loggedInUser;
   bool isLoading = true;
   TextEditingController emailController = TextEditingController();
@@ -26,34 +30,41 @@ class _HomeState extends State<Home> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    initializeServerClient();
     emailController.text = "sairish2001@gmail.com";
     passwordController.text = "12345678";
     checkAuth();
   }
 
-  navigateToMyNotes(
-      {required appwriteServer.Databases databases,
-      required appwriteServer.Users users}) {
+  void initializeServerClient() {
+    serverClient = appwriteServer.Client()
+        .setEndpoint(Constants.ENDPOINT)
+        .setProject(Constants.PROJECT_ID)
+        .setKey(Constants.API_KEY)
+        .setSelfSigned(status: true); // For self-signed certificates, only use for development
+
+    accountServer = appwriteServer.Account(serverClient);
+    databasesServer = appwriteServer.Databases(serverClient);
+    usersServer = appwriteServer.Users(serverClient);
+  }
+
+  void navigateToMyNotes() {
     Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (context) => Notes(
               account: account,
-              databases: databases,
-              users: users,
+              databases: databasesServer,
+              users: usersServer,
             )));
   }
 
-  checkAuth() async {
+  Future<void> checkAuth() async {
     try {
-      final user = await widget.account.get();
-      loggedInUser = user;
-
-      Map<String, dynamic> userAndDatabase = await initializeServerClient();
-
-      navigateToMyNotes(
-          databases: userAndDatabase['database'],
-          users: userAndDatabase['user']);
+      final user = await account.get();
+      setState(() {
+        loggedInUser = user;
+      });
+      navigateToMyNotes();
     } catch (e) {
       setState(() {
         loggedInUser = null;
@@ -62,48 +73,18 @@ class _HomeState extends State<Home> {
     }
   }
 
-  Future<Map<String, dynamic>> initializeServerClient() async {
-    Jwt jwt = await widget.account.createJWT();
-
-    appwriteServer.Client clientServer = appwriteServer.Client();
-    clientServer
-        .setEndpoint(Constants.ENDPOINT)
-        .setProject(Constants.PROJECT_ID)
-        .setKey(Constants.API_KEY)
-        .setJWT(jwt.jwt)
-        .setSelfSigned(
-            status:
-                true); // For self signed certificates, only use for development
-    final databases = appwriteServer.Databases(clientServer);
-    appwriteServer.Users users = appwriteServer.Users(clientServer);
-
-    return {'database': databases, 'user': users};
-  }
-
   Future<void> login(String email, String password) async {
     setState(() {
       isLoading = true;
     });
     try {
-      print("called 1");
-      await widget.account.createEmailSession(email: email, password: password);
-      print("called 2");
-      // print(await widget.account.get());
-      // final user = await widget.account.get();
-      print("called 3");
-      // print(user);
+      await account.createEmailSession(email: email, password: password);
       setState(() {
-        // loggedInUser = user;
         isLoading = false;
       });
-      Map<String, dynamic> userAndDatabase = await initializeServerClient();
-
-      navigateToMyNotes(
-          databases: userAndDatabase['database'],
-          users: userAndDatabase['user']);
+      navigateToMyNotes();
     } catch (e) {
       print(e);
-      print("called");
       setState(() {
         isLoading = false;
       });
@@ -114,14 +95,19 @@ class _HomeState extends State<Home> {
     setState(() {
       isLoading = true;
     });
-    await widget.account.create(
-        userId: appwriteServer.ID.unique(),
-        email: email,
-        password: password,
-        name: name);
-    // await widget.account.create(
-    //     userId: ID.unique(), email: email, password: password, name: name);
-    await login(email, password);
+    try {
+      await usersServer.create(
+          userId: appwriteServer.ID.unique(),
+          email: email,
+          password: password,
+          name: name);
+      await login(email, password);
+    } catch (e) {
+      print(e);
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override

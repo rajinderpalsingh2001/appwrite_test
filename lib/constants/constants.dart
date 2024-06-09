@@ -1,0 +1,9 @@
+class Constants {
+  static String PROJECT_ID = '65bf411e83ca49cacd1e';
+  static String DATABASE_ID = '65bf415d13c3939442ec';
+  static String ENDPOINT = 'http://34.131.89.6/v1';
+  static String NOTES_COLLECTION_ID = '65bf417a5467864b9d6a';
+  static String ORDERS_COLLECTION_ID = '65bf44ec3cacb813594f';
+  static String API_KEY =
+      "b3b8f0463af4bfd0e8991195c1201e3aed5126bb4355b22229afa28211b87bbbf794d05102e53b1054093577cd7b75ad74992083b332b3b27bf287f0ce2e4116f75151320b13ce3a6613a70e295ad3eb6a808cc29088d9ee76561cda28198b2f3b59b42ad4b7f50d92d141b1e249e1f9928e53e40cfb02a3dce93eec70655562";
+}
